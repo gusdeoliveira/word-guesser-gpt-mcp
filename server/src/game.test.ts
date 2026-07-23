@@ -20,7 +20,7 @@ describe("daily puzzle", () => {
     expect(answerFor("en", "2026-07-21")).toBe(answerFor("en", "2026-07-21"));
   });
 
-  it("rejects unknown placeholder words without consuming an attempt", () => {
+  it("rejects unknown words without consuming an attempt", () => {
     expect(checkGuess("en", "2026-07-21", "ZZZZZ")).toMatchObject({
       accepted: false,
       message: "not_in_word_list",

@@ -1,34 +1,7 @@
-// Placeholder only. Replace these arrays with the curated Brazilian Portuguese list later.
-// Words are stored without diacritics so physical and on-screen keyboard input compare equally.
-export const PORTUGUESE_ANSWERS = [
-  "TERMO",
-  "NUVEM",
-  "LIVRO",
-  "CAMPO",
-  "FESTA",
-  "PRAIA",
-  "RISOS",
-  "PEDRA",
-  "CLARO",
-  "SONHO",
-] as const;
+import { readFileSync } from "node:fs";
+import { parseFiveLetterWordList } from "../../../shared/word-list.js";
 
-export const PORTUGUESE_ALLOWED = [
-  ...PORTUGUESE_ANSWERS,
-  "AMIGO",
-  "BOLSA",
-  "CASAL",
-  "CHUVA",
-  "COISA",
-  "FOLHA",
-  "FORTE",
-  "FRUTA",
-  "JOVEM",
-  "LINDA",
-  "MUNDO",
-  "NOITE",
-  "PONTO",
-  "PORTA",
-  "TEMPO",
-  "VERDE",
-] as const;
+const source = readFileSync(new URL("../../../words_pt.txt", import.meta.url), "utf8");
+
+export const PORTUGUESE_ANSWERS = parseFiveLetterWordList(source);
+export const PORTUGUESE_ALLOWED = PORTUGUESE_ANSWERS;

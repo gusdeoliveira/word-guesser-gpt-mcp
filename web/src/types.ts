@@ -42,6 +42,7 @@ export type GameProgress = {
 declare global {
   interface Window {
     openai?: {
+      theme?: "light" | "dark";
       toolOutput?: unknown;
       widgetState?: unknown;
       setWidgetState?: (state: unknown) => void;

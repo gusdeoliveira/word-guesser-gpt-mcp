@@ -4,25 +4,22 @@
 
 :root {
   font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: var(--text-primary, #171717);
+  color: var(--color-text-primary, var(--text-primary, #171717));
   background: transparent;
   --game-green: #16815d;
   --game-green-deep: #0e6547;
   --game-amber: #bd8b2d;
-  --game-ink: #20201f;
-  --game-muted: #6f706c;
-  --game-line: color-mix(in srgb, currentColor 14%, transparent);
-  --game-key: color-mix(in srgb, currentColor 9%, transparent);
+  --game-ink: var(--color-text-primary, #20201f);
+  --game-muted: var(--color-text-secondary, #6f706c);
+  --game-line: var(--color-border, color-mix(in srgb, currentColor 14%, transparent));
+  --game-key: var(--color-background-secondary-soft-alpha, color-mix(in srgb, currentColor 9%, transparent));
+  --game-key-hover: var(--color-background-secondary-soft-alpha-hover, color-mix(in srgb, currentColor 14%, transparent));
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --game-green: #3da77f;
-    --game-green-deep: #2d8e6a;
-    --game-amber: #c59b4b;
-    --game-ink: #f2f2ee;
-    --game-muted: #aaa9a3;
-  }
+:root[data-theme="dark"] {
+  --game-green: #3da77f;
+  --game-green-deep: #2d8e6a;
+  --game-amber: #c59b4b;
 }
 
 * { box-sizing: border-box; }
@@ -33,6 +30,18 @@ body { background: transparent; }
 
 button { font: inherit; }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .game-shell {
   width: min(100%, 620px);
   margin: 0 auto;
@@ -41,53 +50,20 @@ button { font: inherit; }
 }
 
 .game-header,
-.game-status,
 .game-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
 }
 
 .game-header {
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--game-line);
+  padding-bottom: 8px;
   animation: enter-down 420ms cubic-bezier(.2,.8,.2,1) both;
 }
 
-.brand-lockup { min-width: 0; }
-
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--game-green);
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: .16em;
-}
-
-.eyebrow svg { width: 13px; height: 13px; }
-
-h1 {
-  margin: 3px 0 0;
-  color: var(--game-ink);
-  font-size: clamp(24px, 6vw, 34px);
-  font-weight: 760;
-  letter-spacing: -.045em;
-  line-height: 1;
-}
-
-.header-actions { display: flex; gap: 2px; }
-
-.game-status {
-  padding: 13px 1px 11px;
-  color: var(--game-muted);
-  font-size: 12px;
-  animation: enter-down 420ms 80ms cubic-bezier(.2,.8,.2,1) both;
-}
-
-.game-status p { margin: 0; }
-.game-status span { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.header-actions { display: flex; align-items: center; gap: 2px; }
+.language-button { font-variant-numeric: tabular-nums; }
+.language-code { min-width: 1.45em; font-size: 11px; font-weight: 700; letter-spacing: .04em; }
 
 .board {
   display: grid;
@@ -182,7 +158,7 @@ h1 {
   transition: transform 100ms ease, background 160ms ease, color 160ms ease;
 }
 
-.key:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
+.key:hover { background: var(--game-key-hover); }
 .key:active { transform: translateY(2px) scale(.97); }
 .key:disabled { cursor: wait; opacity: .72; }
 .key-wide { flex-grow: 1.45; max-width: 64px; font-size: 10px; }
@@ -192,15 +168,10 @@ h1 {
 .key[data-state="absent"] { color: white; background: #62635f; opacity: .68; }
 
 .game-footer {
-  gap: 12px;
-  margin-top: 13px;
-  padding-top: 11px;
-  border-top: 1px solid var(--game-line);
+  margin-top: 8px;
   color: var(--game-muted);
 }
 
-.cache-note { display: inline-flex; align-items: center; gap: 7px; font-size: 10px; }
-.cache-dot { width: 6px; height: 6px; border-radius: 999px; background: var(--game-green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--game-green) 16%, transparent); }
 .bridge-warning { margin: 8px 0 0; color: var(--game-amber); font-size: 11px; text-align: center; }
 
 .help-backdrop {
@@ -249,9 +220,6 @@ h1 {
 
 @media (max-width: 420px) {
   .game-shell { padding-inline: 10px; }
-  .game-status p { max-width: 68%; }
-  .game-footer { align-items: flex-end; }
-  .cache-note { max-width: 150px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

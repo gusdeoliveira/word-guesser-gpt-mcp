@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@openai/apps-sdk-ui/components/Button";
-import { CheckCircleFilled, Globe, Help, Keyboard, Reload, TrophyTop, X } from "@openai/apps-sdk-ui/components/Icon";
+import { CheckCircleFilled, Globe, Question, Reload, TrophyTop, X } from "@openai/apps-sdk-ui/components/Icon";
 import type { App as McpApp } from "@modelcontextprotocol/ext-apps";
 import {
   MAX_ATTEMPTS,
@@ -12,14 +12,21 @@ import {
   type GameLocale,
   type LetterState,
 } from "../../shared/game.js";
+import { parseFiveLetterWordList } from "../../shared/word-list.js";
+import englishWordSource from "../../words_en.txt?raw";
+import portugueseWordSource from "../../words_pt.txt?raw";
 import { callGuessTool, createGameBridge, type BridgeStatus, type ToolPayload } from "./bridge.js";
 import { t } from "./i18n.js";
 import type { GameProgress, GuessPayload, GuessRow, OpenGamePayload } from "./types.js";
 
 const KEYBOARD_ROWS = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
 const STANDALONE_WORDS: Record<GameLocale, readonly string[]> = {
-  en: ["CRANE", "LIGHT", "OCEAN", "PLANT", "SMILE"],
-  "pt-BR": ["TERMO", "NUVEM", "LIVRO", "CAMPO", "FESTA"],
+  en: parseFiveLetterWordList(englishWordSource),
+  "pt-BR": parseFiveLetterWordList(portugueseWordSource),
+};
+const STANDALONE_ALLOWED: Record<GameLocale, ReadonlySet<string>> = {
+  en: new Set(STANDALONE_WORDS.en),
+  "pt-BR": new Set(STANDALONE_WORDS["pt-BR"]),
 };
 
 function todayKey() {
@@ -84,6 +91,20 @@ function standaloneGuess(locale: GameLocale, puzzleKey: string, attempt: number,
       isWin: false,
       isComplete: false,
       message: "five_letters",
+      stateVersion: `${locale}:${puzzleKey}:${attempt}:${guess}`,
+    };
+  }
+  if (!STANDALONE_ALLOWED[locale].has(guess)) {
+    return {
+      kind: "guess_result",
+      accepted: false,
+      locale,
+      puzzleKey,
+      attempt,
+      guess,
+      isWin: false,
+      isComplete: false,
+      message: "not_in_word_list",
       stateVersion: `${locale}:${puzzleKey}:${attempt}:${guess}`,
     };
   }
@@ -313,26 +334,28 @@ export function App() {
   return (
     <main className="game-shell">
       <header className="game-header">
-        <div className="brand-lockup">
-          <span className="eyebrow"><Keyboard aria-hidden="true" />{text.eyebrow}</span>
-          <h1>{text.title}</h1>
-        </div>
+        <h1 className="sr-only">{text.title}</h1>
         <div className="header-actions">
-          <Button color="secondary" variant="ghost" size="sm" uniform aria-label={text.switchLanguage} onClick={switchLocale}>
-            <Globe />
+          <Button
+            color="secondary"
+            variant="ghost"
+            size="sm"
+            className="language-button"
+            aria-label={`${text.switchLanguage} (${locale === "pt-BR" ? "BR" : "EN"})`}
+            onClick={switchLocale}
+          >
+            <Globe aria-hidden="true" />
+            <span className="language-code">{locale === "pt-BR" ? "BR" : "EN"}</span>
           </Button>
           <Button color="secondary" variant="ghost" size="sm" uniform aria-label={text.help} onClick={() => setHelpOpen(true)}>
-            <Help />
+            <Question />
           </Button>
         </div>
       </header>
 
-      <section className="game-status" aria-live="polite">
-        <p>{text.instruction}</p>
-        <span>
-          {text.attempt} {progress.status === "playing" ? Math.min(progress.rows.length + 1, MAX_ATTEMPTS) : progress.rows.length} {text.of} {MAX_ATTEMPTS}
-        </span>
-      </section>
+      <p className="sr-only" aria-live="polite">
+        {text.attempt} {progress.status === "playing" ? Math.min(progress.rows.length + 1, MAX_ATTEMPTS) : progress.rows.length} {text.of} {MAX_ATTEMPTS}
+      </p>
 
       <section className={`board ${shake ? "shake" : ""}`} key={shake} aria-label={text.instruction}>
         {rows}
@@ -375,7 +398,6 @@ export function App() {
       </section>
 
       <footer className="game-footer">
-        <span className="cache-note"><span className="cache-dot" />{text.cached}</span>
         <Button color="secondary" variant="ghost" size="xs" onClick={reset}>
           <Reload />{text.reset}
         </Button>
@@ -389,7 +411,7 @@ export function App() {
             <Button color="secondary" variant="ghost" size="sm" uniform className="help-close" aria-label={text.close} onClick={() => setHelpOpen(false)}>
               <X />
             </Button>
-            <span className="help-mark"><Help aria-hidden="true" /></span>
+            <span className="help-mark"><Question aria-hidden="true" /></span>
             <h2 id="help-title">{text.helpTitle}</h2>
             <p>{text.helpBody}</p>
             <ul>

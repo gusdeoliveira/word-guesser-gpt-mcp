@@ -1,9 +1,20 @@
-import { App } from "@modelcontextprotocol/ext-apps";
+import {
+  App,
+  applyDocumentTheme,
+  applyHostStyleVariables,
+} from "@modelcontextprotocol/ext-apps";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { GuessPayload, OpenGamePayload } from "./types.js";
 
 export type BridgeStatus = "connecting" | "connected" | "standalone" | "error";
 export type ToolPayload = OpenGamePayload | GuessPayload;
+
+type HostContext = ReturnType<App["getHostContext"]>;
+
+function applyHostContext(context: HostContext) {
+  if (context?.theme) applyDocumentTheme(context.theme);
+  if (context?.styles?.variables) applyHostStyleVariables(context.styles.variables);
+}
 
 function payloadFromResult(result: CallToolResult | undefined): ToolPayload | undefined {
   const payload = result?.structuredContent;
@@ -25,11 +36,15 @@ export function createGameBridge(onPayload: (payload: ToolPayload) => void) {
     const payload = payloadFromResult(params);
     if (payload) onPayload(payload);
   };
+  app.onhostcontextchanged = applyHostContext;
 
   return {
     app,
     status: "connecting" as const,
-    connect: async () => app.connect(),
+    connect: async () => {
+      await app.connect();
+      applyHostContext(app.getHostContext());
+    },
   };
 }
 

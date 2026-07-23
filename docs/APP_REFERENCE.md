@@ -50,29 +50,26 @@ Each puzzle has its own cache key:
 word-guesser:v1:<locale>:<YYYY-MM-DD>
 ```
 
-The cached snapshot contains submitted rows, status, optional completed-game answer, and update time. Guess validation remains authoritative on the server in ChatGPT mode. Standalone browser mode uses a clearly limited local fallback list for UI development.
+The cached snapshot contains submitted rows, status, optional completed-game answer, and update time. Guess validation remains authoritative on the server in ChatGPT mode. Standalone browser mode bundles the same normalized lists for local UI development.
 
-## Replacing the placeholder word lists
+## Word lists
 
-Replace the arrays in:
+The source dictionaries are:
 
-- `server/src/words/en.ts`
-- `server/src/words/pt-BR.ts`
+- `words_en.txt`
+- `words_pt.txt`
 
-Keep these rules:
+At startup/build time, both lists are normalized to five uppercase A-Z letters and deduplicated. The current sets contain 2,332 English entries and 5,427 unique Brazilian Portuguese entries after normalization. The same entries serve as possible daily answers and accepted guesses.
 
-1. Store exactly five normalized A-Z letters per entry.
-2. Put possible daily answers in `*_ANSWERS`.
-3. Put every accepted guess in `*_ALLOWED`; the answer list must be included.
-4. Remove duplicates after normalization.
-5. Keep offensive, extremely obscure, proper-name, and regionally ambiguous words out of the answer list.
-6. Add word-list license/source notes before shipping a third-party list.
-
-Portuguese input is normalized with Unicode NFD, so a typed word such as `TÊNIS` compares as `TENIS`. Decide whether the future curated list should display accents after a completed puzzle; the placeholder implementation displays the normalized form.
+Portuguese input uses Unicode NFD normalization, so a typed word such as `TÊNIS` compares as `TENIS`. Completed answers are displayed in normalized form. Before public submission, review answer suitability and document the source/license for both dictionaries.
 
 ## Visual system
 
 - Single visual anchor: the 5 × 6 letter board.
+- The default screen keeps static chrome to controls only; the game title, instructions, and attempt count remain available to assistive technology.
+- Validation, connection, win, and loss messages appear only when they are actionable.
+- The header uses the Apps SDK circled question-mark glyph for help and shows the active language as `EN` or `BR`.
+- Apps SDK and MCP host theme values are applied to the document so light/dark control states retain readable contrast.
 - One green success/accent color, amber for present letters, neutral gray for absent letters.
 - ChatGPT Apps SDK UI provides button styling, tokens, and icons.
 - Motion is limited to first render, tile entry, result flip, invalid-input shake, and help-panel reveal.
@@ -80,7 +77,7 @@ Portuguese input is normalized with Unicode NFD, so a typed word such as `TÊNIS
 
 ## Production follow-ups
 
-- Replace and license the placeholder word lists.
+- Review answer suitability and document the word-list sources/licenses.
 - Add abuse-safe request logging and latency/error metrics for `/mcp`.
 - Host behind a stable HTTPS endpoint with streaming-friendly proxy settings.
 - Set `_meta.ui.domain` to the final unique widget origin before public submission.

@@ -30,7 +30,7 @@ For standalone widget development, run:
 npm run dev:web
 ```
 
-Then open `http://localhost:5173`. Standalone mode uses a small local placeholder answer set; ChatGPT mode validates guesses through the MCP tool.
+Then open `http://localhost:5173`. Standalone mode bundles the same English and Brazilian Portuguese word lists used by the MCP server; ChatGPT mode validates guesses through the MCP tool.
 
 Useful checks:
 

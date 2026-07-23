@@ -1,35 +1,7 @@
-// Placeholder only. Replace these arrays with the curated English list later.
-export const ENGLISH_ANSWERS = [
-  "CRANE",
-  "LIGHT",
-  "OCEAN",
-  "PLANT",
-  "SMILE",
-  "BRAVE",
-  "MUSIC",
-  "CLOUD",
-  "STONE",
-  "DREAM",
-] as const;
+import { readFileSync } from "node:fs";
+import { parseFiveLetterWordList } from "../../../shared/word-list.js";
 
-export const ENGLISH_ALLOWED = [
-  ...ENGLISH_ANSWERS,
-  "ABOUT",
-  "ABOVE",
-  "ADORE",
-  "APPLE",
-  "BEACH",
-  "CHAIR",
-  "EARTH",
-  "FRAME",
-  "GRAPE",
-  "HOUSE",
-  "LEMON",
-  "NIGHT",
-  "QUIET",
-  "RIVER",
-  "SHARE",
-  "TABLE",
-  "WATER",
-  "WORLD",
-] as const;
+const source = readFileSync(new URL("../../../words_en.txt", import.meta.url), "utf8");
+
+export const ENGLISH_ANSWERS = parseFiveLetterWordList(source);
+export const ENGLISH_ALLOWED = ENGLISH_ANSWERS;
