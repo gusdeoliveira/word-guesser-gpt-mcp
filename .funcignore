@@ -1,0 +1,13 @@
+.git*
+.azure/
+.copilot-azure/
+.env*
+local.settings.json*
+infra/
+scripts/
+web/
+docs/
+**/*.test.*
+**/*.ts
+tsconfig*.json
+README.md

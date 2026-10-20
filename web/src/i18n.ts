@@ -2,7 +2,7 @@ import type { GameLocale } from "../../shared/game.js";
 
 const copy = {
   en: {
-    title: "FIVE LETTERS",
+    title: "Word Guesser",
     instruction: "Guess the word in six tries.",
     attempt: "Attempt",
     of: "of",
@@ -26,7 +26,7 @@ const copy = {
     close: "Close help",
   },
   "pt-BR": {
-    title: "CINCO LETRAS",
+    title: "Word Guesser",
     instruction: "Descubra a palavra em seis tentativas.",
     attempt: "Tentativa",
     of: "de",

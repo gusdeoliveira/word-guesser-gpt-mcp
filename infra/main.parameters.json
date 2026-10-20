@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "brazilsouth"
+    },
+    "resourceGroupName": {
+      "value": "rg-word-guesser-brazilsouth"
+    },
+    "appName": {
+      "value": "func-word-guesser-6e5da"
+    }
+  }
+}

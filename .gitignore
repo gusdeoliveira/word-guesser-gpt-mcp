@@ -5,4 +5,14 @@ dist/
 !.env.example
 *.log
 .DS_Store
-
+local.settings.json
+infra/*.json
+!infra/main.parameters.json
+.azure/validate-status.json
+.azure/deployment-output.json
+.azure/validation-output.txt
+.azure/npm-cache/
+.azure/workflow.ps1
+.azure/monitoring-reference-query.json
+.azure/monitoring-preflight.json
+.copilot-azure/

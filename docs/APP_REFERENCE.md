@@ -1,6 +1,6 @@
-# Five Letters app reference
+# Word Guesser app reference
 
-Last updated: 2026-07-21
+Last updated: 2026-10-01
 
 ## Product contract
 
@@ -75,11 +75,44 @@ Portuguese input uses Unicode NFD normalization, so a typed word such as `TÊNIS
 - Motion is limited to first render, tile entry, result flip, invalid-input shake, and help-panel reveal.
 - Dark mode follows the host/browser color scheme and reduced-motion preferences are honored.
 
+## Public submission pages
+
+The MCP origin also serves the public pages and assets required for app review:
+
+- `/` and `/docs`: English developer documentation for the app's tools and widget.
+- `/privacy`: data handling, local persistence, infrastructure, and user-choice disclosures.
+- `/terms`: the app's terms of use.
+- `/favicon.ico` and `/logo.svg`: shared 11 Feed publisher branding.
+
+The public pages identify Gustavo de Oliveira Soares Silva, trading as 11 Feed, as the
+operator and use `support@11feed.com` for privacy, legal, and support contact.
+
 ## Production follow-ups
 
 - Review answer suitability and document the word-list sources/licenses.
 - Add abuse-safe request logging and latency/error metrics for `/mcp`.
-- Host behind a stable HTTPS endpoint with streaming-friendly proxy settings.
-- Set `_meta.ui.domain` to the final unique widget origin before public submission.
+- Complete OpenAI domain verification and public submission packaging.
 - Re-run ChatGPT Developer Mode tests on web and mobile after every SDK upgrade.
 - Revisit dependency audit findings as upstream MCP and Apps SDK UI releases land.
+
+## Azure hosting
+
+Azure Functions hosts the stateless MCP server on Linux Flex Consumption using the
+self-hosted MCP custom-handler preview and Node 22. The configured origin is
+`https://func-word-guesser-6e5da.azurewebsites.net`; the MCP path remains `/mcp`,
+and public pages have no `/api` prefix. Standalone MCP GET event streams return
+HTTP 405; JSON-RPC requests and notifications use POST.
+
+`npm run build:azure` compiles the server and stages its widget, public pages and
+dictionaries in `dist/azure`. Production dependencies are installed there before
+`scripts/publish-azure.ps1` packages and uploads them through Flex OneDeploy.
+`WIDGET_DOMAIN` supplies the UI resource's dedicated origin. Production startup
+fails if the bundled widget is missing.
+
+Infrastructure is reproducible through `infra/main.bicep` and uses resource group
+`rg-word-guesser-brazilsouth` and managed identity storage access. Only the Function App,
+Flex Consumption plan and required storage account are retained. Application Insights,
+Log Analytics and their alert resources are not configured, so application telemetry
+is not sent to an Azure monitoring workspace. Functions execution and storage remain usage billed.
+The public game requires no login. Public OpenAI submission and real ChatGPT
+web/mobile UI testing remain separate from deployment verification.

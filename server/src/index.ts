@@ -19,6 +19,13 @@ const MCP_PATH = "/mcp";
 const port = Number(process.env.PORT ?? 8787);
 const here = dirname(fileURLToPath(import.meta.url));
 const widgetPath = resolve(here, "../../dist/web/index.html");
+const publicDir = resolve(here, "../../public");
+const widgetDomain = process.env.WIDGET_DOMAIN
+  ? new URL(process.env.WIDGET_DOMAIN).origin
+  : undefined;
+const productionWidgetHtml = process.env.NODE_ENV === "production"
+  ? await readFile(widgetPath, "utf8")
+  : undefined;
 
 const localeSchema = z.enum(["en", "pt-BR"]);
 const letterStateSchema = z.enum(["correct", "present", "absent"]);
@@ -52,10 +59,30 @@ type ClientMeta = {
 };
 
 async function loadWidgetHtml(): Promise<string> {
+  if (productionWidgetHtml) return productionWidgetHtml;
   try {
     return await readFile(widgetPath, "utf8");
   } catch {
     return `<!doctype html><html><body><main style="font-family:system-ui;padding:24px"><h2>Widget not built</h2><p>Run <code>npm run build:web</code>, then refresh the app.</p></main></body></html>`;
+  }
+}
+
+async function servePublicFile(
+  response: import("node:http").ServerResponse,
+  filename: string,
+  contentType: string,
+  cacheControl: string,
+): Promise<void> {
+  try {
+    const body = await readFile(resolve(publicDir, filename));
+    response.writeHead(200, {
+      "content-type": contentType,
+      "cache-control": cacheControl,
+    });
+    response.end(body);
+  } catch {
+    response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    response.end("Not found");
   }
 }
 
@@ -64,7 +91,7 @@ function createWordGuesserServer() {
     { name: "word-guesser", version: APP_VERSION },
     {
       instructions:
-        "Use open_word_game whenever the user asks to play, start, or continue the five-letter word game. The widget owns progress locally. Guess validation is available only to the app UI.",
+        "Use open_word_game whenever the user asks to play, start, or continue Word Guesser or a five-letter word game. The widget owns progress locally. Guess validation is available only to the app UI.",
     },
   );
 
@@ -72,7 +99,7 @@ function createWordGuesserServer() {
     server,
     "Word Guesser game",
     RESOURCE_URI,
-    { description: "Interactive five-letter guessing game for ChatGPT." },
+    { description: "Word Guesser is an interactive five-letter guessing game for ChatGPT." },
     async () => ({
       contents: [
         {
@@ -82,6 +109,7 @@ function createWordGuesserServer() {
           _meta: {
             ui: {
               prefersBorder: false,
+              ...(widgetDomain ? { domain: widgetDomain } : {}),
               csp: { connectDomains: [], resourceDomains: [] },
             },
             "openai/widgetDescription":
@@ -97,9 +125,9 @@ function createWordGuesserServer() {
     server,
     "open_word_game",
     {
-      title: "Open five-letter word game",
+      title: "Open Word Guesser",
       description:
-        "Use this when the user wants to play, start, resume, or open the five-letter word guessing game.",
+        "Use this when the user wants to play, start, resume, or open Word Guesser, a five-letter word guessing game.",
       inputSchema: {
         language: z
           .enum(["auto", "en", "pt-BR"])
@@ -141,8 +169,8 @@ function createWordGuesserServer() {
             type: "text" as const,
             text:
               locale === "pt-BR"
-                ? "Abri o desafio de cinco letras de hoje. O progresso fica salvo localmente."
-                : "Opened today’s five-letter puzzle. Progress is saved locally.",
+                ? "Abri o desafio de hoje do Word Guesser. O progresso fica salvo localmente."
+                : "Opened today’s Word Guesser puzzle. Progress is saved locally.",
           },
         ],
       };
@@ -212,7 +240,52 @@ function createWordGuesserServer() {
 const httpServer = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
 
-  if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+  if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/docs")) {
+    await servePublicFile(
+      response,
+      "docs.html",
+      "text/html; charset=utf-8",
+      "public, max-age=300",
+    );
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/privacy") {
+    await servePublicFile(
+      response,
+      "privacy.html",
+      "text/html; charset=utf-8",
+      "public, max-age=300",
+    );
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/terms") {
+    await servePublicFile(
+      response,
+      "terms.html",
+      "text/html; charset=utf-8",
+      "public, max-age=300",
+    );
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/favicon.ico") {
+    await servePublicFile(response, "favicon.ico", "image/x-icon", "public, max-age=86400");
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/logo.svg") {
+    await servePublicFile(
+      response,
+      "logo.svg",
+      "image/svg+xml; charset=utf-8",
+      "public, max-age=86400",
+    );
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/health") {
     response.writeHead(200, { "content-type": "application/json; charset=utf-8" });
     response.end(JSON.stringify({ ok: true, app: "word-guesser", mcp: MCP_PATH }));
     return;
@@ -229,7 +302,23 @@ const httpServer = createServer(async (request, response) => {
     return;
   }
 
-  if (url.pathname === MCP_PATH && ["POST", "GET", "DELETE"].includes(request.method ?? "")) {
+  // Stateless JSON responses need no standalone event stream. Explicitly decline
+  // GET so Functions does not keep an idle proxy connection open waiting for events.
+  if (url.pathname === MCP_PATH && request.method === "GET") {
+    response.writeHead(405, {
+      "content-type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      Allow: "POST, OPTIONS",
+    });
+    response.end(JSON.stringify({
+      jsonrpc: "2.0",
+      error: { code: -32000, message: "This stateless MCP endpoint accepts POST requests." },
+      id: null,
+    }));
+    return;
+  }
+
+  if (url.pathname === MCP_PATH && ["POST", "DELETE"].includes(request.method ?? "")) {
     response.setHeader("Access-Control-Allow-Origin", "*");
     response.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
     const server = createWordGuesserServer();
