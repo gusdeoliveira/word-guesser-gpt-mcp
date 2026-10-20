@@ -257,7 +257,7 @@ export function App() {
       setNotice(result.isWin ? text.won : result.isComplete ? `${text.lost} ${result.answer}.` : "");
       void appRef.current?.updateModelContext({
         structuredContent: {
-          game: "five-letter-word",
+          game: "word-guesser",
           locale,
           attempt,
           guesses: nextRows.map((row) => row.guess),

@@ -1,6 +1,6 @@
-# Five Letters — ChatGPT word game
+# Word Guesser — ChatGPT word game
 
-An interactive five-letter guessing game for ChatGPT. Players get six attempts, Wordle-style letter feedback, a physical/on-screen keyboard, and local progress persistence. The app defaults to English and selects Brazilian Portuguese when ChatGPT supplies `BR` in the coarse user-location hint. Players can switch languages at any time.
+Word Guesser is an interactive five-letter guessing game for ChatGPT. Players get six attempts, Wordle-style letter feedback, a physical/on-screen keyboard, and local progress persistence. The app defaults to English and selects Brazilian Portuguese when ChatGPT supplies `BR` in the coarse user-location hint. Players can switch languages at any time.
 
 This is an `interactive-decoupled` ChatGPT app:
 
@@ -21,6 +21,9 @@ npm start
 
 The server exposes:
 
+- docs: `http://localhost:8787/`
+- privacy: `http://localhost:8787/privacy`
+- terms: `http://localhost:8787/terms`
 - health: `http://localhost:8787/health`
 - MCP: `http://localhost:8787/mcp`
 
@@ -46,10 +49,42 @@ npm run build:web
 2. Expose port `8787` through a public HTTPS tunnel, for example `ngrok http 8787`.
 3. In ChatGPT, enable Developer mode under **Settings → Security and login**.
 4. Open **Settings → Plugins** (or `chatgpt.com/plugins`), create a developer-mode app, and paste `https://YOUR-TUNNEL.example/mcp`.
-5. Add the app to a new chat and ask: “Let’s play the five-letter word game.”
+5. Add the app to a new chat and ask: “Let’s play Word Guesser.”
 6. Refresh the app in its ChatGPT settings after changing MCP tools or metadata.
 
 No OpenAI API key is required: ChatGPT is the host and the app only exposes MCP tools plus a widget.
+
+## Azure Functions deployment
+
+The app uses Azure Functions' self-hosted MCP custom-handler preview on Linux Flex Consumption,
+with Node 22 and managed identity storage access. The deployment keeps only the Function App,
+Flex Consumption plan and storage account; Application Insights and paid log ingestion are not configured. Infrastructure is in
+`infra/main.bicep`; the current target is `rg-word-guesser-brazilsouth` in Brazil South.
+
+Build a deployment package and install its production dependencies:
+
+```powershell
+npm ci
+npm run build:azure
+npm ci --omit=dev --ignore-scripts --prefix dist/azure
+```
+
+After signing into Azure CLI, validate and provision `infra/main.bicep` at subscription scope
+with `infra/main.parameters.json`, then publish:
+
+```powershell
+./scripts/publish-azure.ps1
+node scripts/check-mcp.mjs https://func-word-guesser-6e5da.azurewebsites.net
+```
+
+The publish script creates a Linux-compatible ZIP, configures `WIDGET_DOMAIN` from the actual
+hostname, and uses Flex OneDeploy with an Azure CLI bearer token. It performs no remote build.
+Update its subscription, resource group and app parameters when using another target.
+
+Use `https://func-word-guesser-6e5da.azurewebsites.net/mcp` in ChatGPT Developer Mode,
+with no authentication. Public submission still needs domain verification, review assets,
+dictionary licensing/provenance, and testing inside ChatGPT. Deployment validation and results
+are recorded in `.azure/deployment-plan.md`.
 
 ## Current package baseline
 
