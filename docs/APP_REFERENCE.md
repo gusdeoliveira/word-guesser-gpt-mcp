@@ -1,6 +1,6 @@
 # Word Guesser app reference
 
-Last updated: 2026-10-01
+Last updated: 2026-10-21
 
 ## Product contract
 
@@ -99,19 +99,29 @@ operator and use `support@11feed.com` for privacy, legal, and support contact.
 
 Azure Functions hosts the stateless MCP server on Linux Flex Consumption using the
 self-hosted MCP custom-handler preview and Node 22. The configured origin is
-`https://func-word-guesser-6e5da.azurewebsites.net`; the MCP path remains `/mcp`,
+`https://word-guesser.mcp.11feed.com`; the MCP path remains `/mcp`,
 and public pages have no `/api` prefix. Standalone MCP GET event streams return
 HTTP 405; JSON-RPC requests and notifications use POST.
 
 `npm run build:azure` compiles the server and stages its widget, public pages and
 dictionaries in `dist/azure`. Production dependencies are installed there before
 `scripts/publish-azure.ps1` packages and uploads them through Flex OneDeploy.
-`WIDGET_DOMAIN` supplies the UI resource's dedicated origin. Production startup
+`.github/workflows/deploy-functions.yml` automates tests, packaging, publication,
+and live MCP verification on pushes to `main`, using branch-scoped Azure OIDC
+authentication. The deployment identity has Website Contributor on the Function
+App only. Public Azure identifiers are included in the workflow; no GitHub secrets
+or variables are required. See `docs/GITHUB_DEPLOYMENT.md` for the configured
+identity and automated setup script. Production deployments are serialized.
+`WIDGET_DOMAIN` supplies the UI resource's dedicated origin and is preserved by the publish script.
+Azure DNS maps the custom name to the Function App; a free site-scoped managed certificate
+provides HTTPS. The Azure hostname remains available. See the README for domain bootstrap details.
+Production startup
 fails if the bundled widget is missing.
 
 Infrastructure is reproducible through `infra/main.bicep` and uses resource group
-`rg-word-guesser-brazilsouth` and managed identity storage access. Only the Function App,
-Flex Consumption plan and required storage account are retained. Application Insights,
+`rg-word-guesser-brazilsouth` and managed identity storage access. The three top-level app resources
+are the Function App, Flex Consumption plan and required storage account; the hostname binding
+and certificate are child resources, and the DNS zone is shared existing infrastructure. Application Insights,
 Log Analytics and their alert resources are not configured, so application telemetry
 is not sent to an Azure monitoring workspace. Functions execution and storage remain usage billed.
 The public game requires no login. Public OpenAI submission and real ChatGPT

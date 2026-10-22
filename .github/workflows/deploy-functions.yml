@@ -1,0 +1,86 @@
+name: Deploy Word Guesser to Azure Functions
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Let an active publish finish before another run can deploy to the same app.
+concurrency:
+  group: word-guesser-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build, test, and deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      # Public identifiers; Azure trusts OIDC tokens from this repo's main branch.
+      AZURE_CLIENT_ID: 5a362a3e-6b8d-4bd8-b162-935ef9bedbca
+      AZURE_TENANT_ID: fc091796-6c49-4dbf-8252-1d44c1b3ac17
+      AZURE_SUBSCRIPTION_ID: 0e928795-9229-4a02-a62f-537616f6e5da
+      AZURE_RESOURCE_GROUP: rg-word-guesser-brazilsouth
+      AZURE_FUNCTION_APP: func-word-guesser-6e5da
+      APP_ORIGIN: https://word-guesser.mcp.11feed.com
+    steps:
+      - name: Check out the pushed commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build and typecheck the Azure package
+        run: npm run build:azure
+
+      - name: Install packaged production dependencies
+        run: npm ci --omit=dev --ignore-scripts --prefix dist/azure
+
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@935127ca5bb3c4b02c9c2c10060028383878f33f # v3
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Publish to Azure Functions
+        shell: pwsh
+        run: |
+          ./scripts/publish-azure.ps1 `
+            -Subscription $env:AZURE_SUBSCRIPTION_ID `
+            -ResourceGroup $env:AZURE_RESOURCE_GROUP `
+            -AppName $env:AZURE_FUNCTION_APP
+
+      - name: Verify the live app and MCP endpoint
+        timeout-minutes: 8
+        shell: bash
+        run: |
+          for attempt in {1..5}; do
+            if node scripts/check-mcp.mjs "$APP_ORIGIN"; then
+              exit 0
+            fi
+            if [[ "$attempt" -lt 5 ]]; then
+              echo "App check failed on attempt $attempt; retrying in 15 seconds."
+              sleep 15
+            fi
+          done
+          echo "::error::Deployment completed, but live verification failed."
+          exit 1

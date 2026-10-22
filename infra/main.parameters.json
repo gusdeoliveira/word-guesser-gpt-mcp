@@ -10,6 +10,9 @@
     },
     "appName": {
       "value": "func-word-guesser-6e5da"
+    },
+    "widgetDomain": {
+      "value": "https://word-guesser.mcp.11feed.com"
     }
   }
 }

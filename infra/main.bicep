@@ -3,6 +3,7 @@ targetScope = 'subscription'
 param location string = 'brazilsouth'
 param resourceGroupName string = 'rg-word-guesser-brazilsouth'
 param appName string = 'func-word-guesser-6e5da'
+param widgetDomain string = ''
 
 resource group 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
@@ -15,6 +16,7 @@ module app './functions.bicep' = {
   params: {
     location: location
     appName: appName
+    widgetDomain: empty(widgetDomain) ? 'https://${appName}.azurewebsites.net' : widgetDomain
   }
 }
 

@@ -10,12 +10,9 @@
       :root {
         color-scheme: light;
         --page: #f7f7f6;
-        --surface: #ffffff;
         --text: #111111;
         --muted: #5c5c59;
-        --border: #e7e6e1;
         --ink: #0b3b37;
-        --code: #f2f2ef;
       }
 
       * { box-sizing: border-box; }
@@ -32,50 +29,40 @@
       a { color: var(--ink); }
 
       .brand {
-        position: fixed;
-        top: 24px;
-        left: 28px;
-        z-index: 1;
+        position: absolute;
+        top: 20px;
+        left: 24px;
       }
 
       .brand img {
         display: block;
-        width: 104px;
+        width: 64px;
         height: auto;
       }
 
       main {
         width: min(760px, calc(100% - 40px));
         margin: 0 auto;
-        padding: 104px 0 56px;
-      }
-
-      .eyebrow {
-        margin: 0 0 8px;
-        color: var(--ink);
-        font-size: 0.8rem;
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
+        padding: 80px 0 40px;
       }
 
       h1 {
         margin: 0;
-        font-size: clamp(2.15rem, 7vw, 3.75rem);
-        line-height: 1.05;
-        letter-spacing: -0.045em;
+        font-size: clamp(1.75rem, 4vw, 2.125rem);
+        line-height: 1.2;
+        letter-spacing: -0.025em;
       }
 
       .lede {
         max-width: 650px;
-        margin: 20px 0 38px;
+        margin: 14px 0 32px;
         color: var(--muted);
-        font-size: 1.08rem;
+        font-size: 1rem;
       }
 
       h2 {
-        margin: 40px 0 14px;
-        font-size: 1.25rem;
+        margin: 32px 0 14px;
+        font-size: 1.125rem;
         letter-spacing: -0.015em;
       }
 
@@ -86,17 +73,10 @@
 
       .stack {
         display: grid;
-        gap: 14px;
+        gap: 24px;
       }
 
-      .card {
-        padding: 22px 24px;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-      }
-
-      .card p {
+      article p {
         margin: 0;
         color: var(--muted);
       }
@@ -104,17 +84,22 @@
       .meta {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 14px;
+        gap: 4px 16px;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 0.875rem;
       }
 
       code {
-        padding: 3px 7px;
-        background: var(--code);
-        border-radius: 5px;
         color: var(--ink);
         font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
         font-size: 0.86em;
+        overflow-wrap: anywhere;
+      }
+
+      .meta code {
+        color: inherit;
+        font-size: inherit;
       }
 
       footer {
@@ -122,9 +107,7 @@
         flex-wrap: wrap;
         justify-content: space-between;
         gap: 16px;
-        margin-top: 48px;
-        padding-top: 20px;
-        border-top: 1px solid var(--border);
+        margin-top: 40px;
         color: var(--muted);
         font-size: 0.9rem;
       }
@@ -136,12 +119,8 @@
 
       @media (max-width: 860px) {
         .brand {
-          position: absolute;
-          top: 24px;
           left: 20px;
         }
-
-        main { padding-top: 100px; }
       }
     </style>
   </head>
@@ -151,7 +130,6 @@
     </a>
 
     <main>
-      <p class="eyebrow">Word Guesser</p>
       <h1>Tools &amp; Widgets</h1>
       <p class="lede">
         Word Guesser is a daily word game for ChatGPT. Players have six attempts to find a
@@ -160,7 +138,7 @@
 
       <h2>MCP tools</h2>
       <div class="stack">
-        <article class="card">
+        <article>
           <h3><code>open_word_game</code></h3>
           <p>
             Opens or resumes the daily puzzle. It selects English by default and Brazilian Portuguese
@@ -173,7 +151,7 @@
           </div>
         </article>
 
-        <article class="card">
+        <article>
           <h3><code>submit_word_guess</code></h3>
           <p>
             Validates a guess from the game widget and returns letter-by-letter feedback. The answer
@@ -188,7 +166,7 @@
       </div>
 
       <h2>Widget resource</h2>
-      <article class="card">
+      <article>
         <h3><code>ui://word-guesser/game-v1.html</code></h3>
         <p>
           A CSP-friendly React interface containing the game board, keyboard, help dialog, language
@@ -201,7 +179,7 @@
       </article>
 
       <h2>Data and state</h2>
-      <article class="card">
+      <article>
         <p>
           The MCP server is stateless. Puzzle progress is saved in browser storage and mirrored to
           ChatGPT widget state. See the <a href="/privacy">Privacy Policy</a> for the complete data disclosure.
