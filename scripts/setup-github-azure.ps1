@@ -4,6 +4,10 @@ param(
     [string]$ResourceGroup = 'rg-word-guesser-brazilsouth',
     [string]$AppName = 'func-word-guesser-6e5da',
     [string]$Repository = 'gusdeoliveira/word-guesser-gpt-mcp',
+    [ValidatePattern('^\d+$')]
+    [string]$RepositoryOwnerId = '59635709',
+    [ValidatePattern('^\d+$')]
+    [string]$RepositoryId = '1308416393',
     [ValidatePattern('^[A-Za-z0-9._/-]+$')]
     [string]$Branch = 'main'
 )
@@ -49,14 +53,26 @@ if ($principals.Count -eq 0) {
 if (-not $principal.id) { throw 'Deployment service principal has no object ID.' }
 
 $issuer = 'https://token.actions.githubusercontent.com'
-$subject = "repo:${Repository}:ref:refs/heads/$Branch"
+$repositoryParts = $Repository.Split('/')
+if ($repositoryParts.Count -ne 2 -or [string]::IsNullOrWhiteSpace($repositoryParts[0]) -or [string]::IsNullOrWhiteSpace($repositoryParts[1])) {
+    throw 'Repository must use the owner/repository format.'
+}
+$owner = $repositoryParts[0]
+$repositoryName = $repositoryParts[1]
+$subject = "repo:${owner}@${RepositoryOwnerId}/${repositoryName}@${RepositoryId}:ref:refs/heads/$Branch"
+$legacySubject = "repo:${Repository}:ref:refs/heads/$Branch"
 $audience = 'api://AzureADTokenExchange'
+$credentialName = 'github-' + $Branch.Replace('/', '-')
 $credentials = @(Invoke-AzureJson -Arguments @('ad', 'app', 'federated-credential', 'list', '--id', $application.id))
 $matchingCredentials = @($credentials | Where-Object { $_.issuer -eq $issuer -and $_.subject -eq $subject -and $_.audiences.Count -eq 1 -and $_.audiences[0] -eq $audience })
+$namedCredentials = @($credentials | Where-Object { $_.name -eq $credentialName })
+if ($matchingCredentials.Count -gt 1 -or $namedCredentials.Count -gt 1) {
+    throw "Multiple federated credentials match the expected name or immutable subject for '$credentialName'."
+}
 if ($matchingCredentials.Count -eq 0) {
     $credentialPath = Join-Path ([IO.Path]::GetTempPath()) ('word-guesser-oidc-' + [Guid]::NewGuid().ToString() + '.json')
     $credential = @{
-        name = 'github-' + $Branch.Replace('/', '-')
+        name = $credentialName
         issuer = $issuer
         subject = $subject
         audiences = @($audience)
@@ -64,7 +80,19 @@ if ($matchingCredentials.Count -eq 0) {
     }
     try {
         [IO.File]::WriteAllText($credentialPath, ($credential | ConvertTo-Json), (New-Object Text.UTF8Encoding($false)))
-        Invoke-AzureJson -Arguments @('ad', 'app', 'federated-credential', 'create', '--id', $application.id, '--parameters', $credentialPath) | Out-Null
+        if ($namedCredentials.Count -eq 1) {
+            $existingCredential = $namedCredentials[0]
+            $expectedLegacyCredential = $existingCredential.issuer -eq $issuer -and
+                $existingCredential.subject -eq $legacySubject -and
+                $existingCredential.audiences.Count -eq 1 -and
+                $existingCredential.audiences[0] -eq $audience
+            if (-not $expectedLegacyCredential) {
+                throw "Federated credential '$credentialName' exists but does not match the expected legacy issuer, subject, and audience; refusing to change it."
+            }
+            Invoke-AzureJson -Arguments @('ad', 'app', 'federated-credential', 'update', '--id', $application.id, '--federated-credential-id', $credentialName, '--parameters', $credentialPath) | Out-Null
+        } else {
+            Invoke-AzureJson -Arguments @('ad', 'app', 'federated-credential', 'create', '--id', $application.id, '--parameters', $credentialPath) | Out-Null
+        }
     } finally {
         if (Test-Path -LiteralPath $credentialPath) { Remove-Item -LiteralPath $credentialPath }
     }
@@ -77,7 +105,7 @@ if ($matchingAssignments.Count -eq 0) {
     Invoke-AzureJson -Arguments @('role', 'assignment', 'create', '--subscription', $Subscription, '--assignee-object-id', $principal.id, '--assignee-principal-type', 'ServicePrincipal', '--role', $websiteContributor, '--scope', $scope) | Out-Null
 }
 
-$verifiedCredentials = @(Invoke-AzureJson -Arguments @('ad', 'app', 'federated-credential', 'list', '--id', $application.id) | Where-Object { $_.issuer -eq $issuer -and $_.subject -eq $subject -and $_.audiences.Count -eq 1 -and $_.audiences[0] -eq $audience })
+$verifiedCredentials = @(Invoke-AzureJson -Arguments @('ad', 'app', 'federated-credential', 'list', '--id', $application.id) | Where-Object { $_.name -eq $credentialName -and $_.issuer -eq $issuer -and $_.subject -eq $subject -and $_.audiences.Count -eq 1 -and $_.audiences[0] -eq $audience })
 $verifiedAssignments = @(Invoke-AzureJson -Arguments @('role', 'assignment', 'list', '--subscription', $Subscription, '--scope', $scope) | Where-Object { $_.principalId -eq $principal.id -and $_.scope -eq $scope -and $_.roleDefinitionId.EndsWith('/' + $websiteContributor) })
 if ($verifiedCredentials.Count -ne 1 -or $verifiedAssignments.Count -ne 1) {
     throw 'Could not verify the branch trust and app-scoped deployment role after setup.'
