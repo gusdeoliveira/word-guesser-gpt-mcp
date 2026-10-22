@@ -2,6 +2,7 @@ param(
     [string]$Subscription = '0e928795-9229-4a02-a62f-537616f6e5da',
     [string]$ResourceGroup = 'rg-word-guesser-brazilsouth',
     [string]$AppName = 'func-word-guesser-6e5da',
+    [string]$WidgetDomain = '',
     [switch]$SkipPackaging
 )
 
@@ -39,10 +40,23 @@ $siteJson = az rest --method get --url "https://management.azure.com${resourceId
 if ($LASTEXITCODE -ne 0) { throw 'Could not read Function App configuration.' }
 $site = ($siteJson -join "`n") | ConvertFrom-Json
 $origin = 'https://' + $site.properties.defaultHostName
+if (-not $WidgetDomain) {
+    $configuredDomain = az functionapp config appsettings list --name $AppName --resource-group $ResourceGroup --subscription $Subscription --query "[?name=='WIDGET_DOMAIN'].value | [0]" -o tsv
+    if ($LASTEXITCODE -ne 0) { throw 'Could not read the existing widget origin.' }
+    $WidgetDomain = if ($configuredDomain) { $configuredDomain.Trim() } else { $origin }
+}
+$widgetUri = $null
+if (-not [Uri]::TryCreate($WidgetDomain, [UriKind]::Absolute, [ref]$widgetUri) -or
+    $widgetUri.Scheme -ne 'https' -or -not $widgetUri.IsDefaultPort -or
+    $widgetUri.AbsolutePath -ne '/' -or $widgetUri.Query -or $widgetUri.Fragment -or $widgetUri.UserInfo -or
+    $site.properties.enabledHostNames -notcontains $widgetUri.DnsSafeHost) {
+    throw 'WidgetDomain must be an HTTPS origin bound to this Function App.'
+}
+$widgetOrigin = $widgetUri.GetLeftPart([UriPartial]::Authority)
 $scmHost = $site.properties.enabledHostNames | Where-Object { $_ -like '*.scm.*' } | Select-Object -First 1
 if (-not $scmHost) { throw 'Function App has no SCM deployment hostname.' }
 
-az functionapp config appsettings set --name $AppName --resource-group $ResourceGroup --subscription $Subscription --settings "WIDGET_DOMAIN=$origin" -o none
+az functionapp config appsettings set --name $AppName --resource-group $ResourceGroup --subscription $Subscription --settings "WIDGET_DOMAIN=$widgetOrigin" -o none
 if ($LASTEXITCODE -ne 0) { throw 'Could not set the dedicated widget origin.' }
 
 $cloudJson = az cloud show -o json
@@ -68,7 +82,7 @@ for ($attempt = 1; $attempt -le 120; $attempt++) {
     Write-Output "Deployment status: $($deployment.status) (complete: $($deployment.complete))"
     if ($deployment.status -eq 4) {
         Write-Output "Deployment succeeded: $($deployment.id)"
-        Write-Output "MCP endpoint: $origin/mcp"
+        Write-Output "MCP endpoint: $widgetOrigin/mcp"
         exit 0
     }
     if ($deployment.status -in @(3, 5, 6)) { throw "Deployment failed; status $($deployment.status), id $($deployment.id)." }

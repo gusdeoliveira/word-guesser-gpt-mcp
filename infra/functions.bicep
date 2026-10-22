@@ -1,5 +1,6 @@
 param location string
 param appName string
+param widgetDomain string
 
 var token = uniqueString(subscription().id, resourceGroup().id)
 var tags = { application: 'word-guesser' }
@@ -40,7 +41,7 @@ resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
   properties: { reserved: true }
 }
 
-resource functions 'Microsoft.Web/sites@2024-04-01' = {
+resource functions 'Microsoft.Web/sites@2025-03-01' = {
   name: appName
   location: location
   kind: 'functionapp,linux'
@@ -50,6 +51,9 @@ resource functions 'Microsoft.Web/sites@2024-04-01' = {
     serverFarmId: plan.id
     httpsOnly: true
     publicNetworkAccess: 'Enabled'
+    // Supported by ARM; the published Bicep type definition omits this property.
+    #disable-next-line BCP037
+    siteScopedCertificatesEnabled: true
     functionAppConfig: {
       runtime: {
         name: 'node'
@@ -75,7 +79,7 @@ resource functions 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'AzureWebJobsStorage__credential', value: 'managedidentity' }
         { name: 'NODE_ENV', value: 'production' }
         { name: 'PORT', value: '8787' }
-        { name: 'WIDGET_DOMAIN', value: 'https://${appName}.azurewebsites.net' }
+        { name: 'WIDGET_DOMAIN', value: widgetDomain }
       ]
     }
   }

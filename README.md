@@ -57,9 +57,17 @@ No OpenAI API key is required: ChatGPT is the host and the app only exposes MCP 
 ## Azure Functions deployment
 
 The app uses Azure Functions' self-hosted MCP custom-handler preview on Linux Flex Consumption,
-with Node 22 and managed identity storage access. The deployment keeps only the Function App,
+with Node 22 and managed identity storage access. The three top-level app resources are the Function App,
 Flex Consumption plan and storage account; Application Insights and paid log ingestion are not configured. Infrastructure is in
 `infra/main.bicep`; the current target is `rg-word-guesser-brazilsouth` in Brazil South.
+
+GitHub Actions deploys pushes to `main` (including merged pull requests) through
+[the deployment workflow](.github/workflows/deploy-functions.yml). It runs tests,
+builds the production package, publishes to the existing Function App, and checks
+the live MCP endpoint. Azure OIDC trust is configured for this repository's `main`
+branch, and the workflow includes its public Azure identifiers. No GitHub secrets
+or variables are required. See [GitHub deployment setup](docs/GITHUB_DEPLOYMENT.md)
+for the configured identity and the automated setup script.
 
 Build a deployment package and install its production dependencies:
 
@@ -74,14 +82,24 @@ with `infra/main.parameters.json`, then publish:
 
 ```powershell
 ./scripts/publish-azure.ps1
-node scripts/check-mcp.mjs https://func-word-guesser-6e5da.azurewebsites.net
+node scripts/check-mcp.mjs https://word-guesser.mcp.11feed.com
 ```
 
-The publish script creates a Linux-compatible ZIP, configures `WIDGET_DOMAIN` from the actual
-hostname, and uses Flex OneDeploy with an Azure CLI bearer token. It performs no remote build.
+The publish script creates a Linux-compatible ZIP, preserves the configured `WIDGET_DOMAIN`,
+and uses Flex OneDeploy with an Azure CLI bearer token. It performs no remote build.
+Use `-WidgetDomain https://YOUR-BOUND-DOMAIN` to change the widget origin; the hostname must
+already be bound to that Function App. Without an existing setting, its actual Azure hostname is used.
 Update its subscription, resource group and app parameters when using another target.
 
-Use `https://func-word-guesser-6e5da.azurewebsites.net/mcp` in ChatGPT Developer Mode,
+The production custom domain is `word-guesser.mcp.11feed.com`. Its existing Azure DNS zone is
+`11feed.com` in `cloud-shell-storage-eastus`: CNAME `word-guesser.mcp` points to
+`func-word-guesser-6e5da.azurewebsites.net`, and TXT `asuid.word-guesser.mcp` holds the app's
+custom-domain verification ID. The domain binding and free site-scoped managed certificate
+are configured separately in Azure; `infra/main.parameters.json` preserves the matching widget origin.
+For a fresh target, validate domain ownership, add the hostname, issue the certificate and bind SNI HTTPS
+before using the custom origin. Keep unrelated zone records intact. The existing Azure hostname remains available.
+
+Use `https://word-guesser.mcp.11feed.com/mcp` in ChatGPT Developer Mode,
 with no authentication. Public submission still needs domain verification, review assets,
 dictionary licensing/provenance, and testing inside ChatGPT. Deployment validation and results
 are recorded in `.azure/deployment-plan.md`.

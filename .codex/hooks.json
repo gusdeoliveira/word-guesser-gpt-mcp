@@ -1,0 +1,21 @@
+{
+  "description": "Stage meaningful repository changes and ask before publishing with github-pr-publish.",
+  "hooks": {
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "node -e \"const fs=require('node:fs'),p=require('node:path'),u=require('node:url');let d=process.cwd();while(!fs.existsSync(p.join(d,'.codex/hooks/session-close.mjs'))){const parent=p.dirname(d);if(parent===d)process.exit(0);d=parent;}import(u.pathToFileURL(p.join(d,'.codex/hooks/session-close.mjs')).href);\"",
+        "timeout": 30,
+        "statusMessage": "Staging changes for publication review"
+      }]
+    }],
+    "SessionEnd": [{
+      "hooks": [{
+        "type": "command",
+        "command": "node -e \"const fs=require('node:fs'),p=require('node:path'),u=require('node:url');let d=process.cwd();while(!fs.existsSync(p.join(d,'.codex/hooks/session-close.mjs'))){const parent=p.dirname(d);if(parent===d)process.exit(0);d=parent;}import(u.pathToFileURL(p.join(d,'.codex/hooks/session-close.mjs')).href);\"",
+        "timeout": 3,
+        "statusMessage": "Staging final session changes"
+      }]
+    }]
+  }
+}

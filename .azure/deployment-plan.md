@@ -4,6 +4,22 @@ Status: Deployed
 
 Authorization: user requested creation after reviewing the Functions hosting assessment and proposed Brazil South target.
 
+## Current change: custom domain (2026-10-21)
+
+Authorization: user requested using `word-guesser.mcp.11feed.com` for this app through its existing Azure DNS setup.
+
+- Confirmed public delegation of `11feed.com` to its Azure DNS zone in `cloud-shell-storage-eastus`, in the same subscription as the Function App.
+- The existing CNAME `word-guesser.mcp` pointed at the old Container App. Updated only that record to `func-word-guesser-6e5da.azurewebsites.net`, TTL 300, using its ETag. Original record saved under the task's temporary directory before changing it.
+- Existing TXT `asuid.word-guesser.mcp` already matched the Function App's custom-domain verification ID; retained unchanged. Other DNS records are unchanged.
+- Verified the live Function App already has `siteScopedCertificatesEnabled=true`; no replacement app or plan upgrade needed.
+- Created the hostname binding and free site-scoped managed certificate `wordguessermcp`, then bound SNI HTTPS. Issuer: GeoTrust TLS RSA CA G1; current certificate expires 2027-04-21. Certificate and hostname are child resources of the existing Function App.
+- Updated the live `WIDGET_DOMAIN` to `https://word-guesser.mcp.11feed.com`. No application package publication was needed.
+- Infrastructure parameters now preserve this widget origin and explicitly retain site-scoped certificate support. The publisher preserves the existing origin and accepts an explicit, bound HTTPS origin override. DNS/certificate bootstrap remains separately managed in Azure, as documented in README.
+- ARM subscription-scope validation: Succeeded, no error. PowerShell syntax, parameter JSON and Git whitespace checks passed. Bicep's missing type definition for the documented site-scoped flag is narrowly suppressed; ARM accepts it.
+- The initial normal connection used Windows' cached old Container App IP. After refreshing the local DNS cache, normal resolution reached the Function App and the unmodified live MCP check passed.
+- `node scripts/check-mcp.mjs https://word-guesser.mcp.11feed.com`: PASS (public pages, initialization/notification, tool schemas, real bundled widget and matching custom origin, locales, guesses, retries, invalid inputs and GET 405).
+- Public endpoint: `https://word-guesser.mcp.11feed.com/mcp`. Azure's original hostname remains available. No Git publishing or new monitoring service is part of this change.
+
 ## Current change: minimal resources (2026-10-19)
 
 Authorization: user explicitly requested keeping only the Function App, hosting plan and storage to simplify the deployment and avoid optional costs. This authorizes removing the four monitoring resources identified in the live inventory and disconnecting their configuration. No new resource, subscription or region selection is involved.
